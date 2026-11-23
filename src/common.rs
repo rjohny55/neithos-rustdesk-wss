@@ -216,3 +216,31 @@ async fn check_software_update_() -> hbb_common::ResultType<()> {
     }
     Ok(())
 }
+/// Forwarded IPs are trusted only behind an explicitly allowlisted proxy.
+/// Preserve the source port so concurrent clients behind NAT remain distinct.
+pub(crate) fn proxy_client_addr(addr: std::net::SocketAddr, headers: &http::HeaderMap) -> std::net::SocketAddr {
+    forwarded_addr(addr, headers, &std::env::var("TRUSTED_PROXIES").unwrap_or_default())
+}
+fn forwarded_addr(addr: std::net::SocketAddr, headers: &http::HeaderMap, networks: &str) -> std::net::SocketAddr {
+    let trusted = networks.split(',').filter_map(|x| x.trim().parse::<ipnetwork::IpNetwork>().ok()).any(|net| net.contains(addr.ip()));
+    if trusted {
+        if let Some(ip) = headers.get("X-Real-IP").and_then(|v| v.to_str().ok()).and_then(|v| v.parse().ok()) {
+            return std::net::SocketAddr::new(ip, addr.port());
+        }
+    }
+    addr
+}
+#[cfg(test)]
+mod proxy_tests {
+    use super::*;
+    #[test]
+    fn forwarded_headers_require_trust_and_preserve_source_port() {
+        let mut headers = http::HeaderMap::new();
+        headers.insert("X-Real-IP", "198.51.100.5".parse().unwrap());
+        let a = "10.239.80.4:32100".parse().unwrap();
+        assert_eq!(forwarded_addr(a, &headers, ""), a);
+        assert_eq!(forwarded_addr(a, &headers, "10.239.80.4/32").to_string(), "198.51.100.5:32100");
+        headers.insert("X-Real-IP", "not-an-ip".parse().unwrap());
+        assert_eq!(forwarded_addr(a, &headers, "10.239.80.4/32"), a);
+    }
+}

@@ -1,0 +1,1 @@
+{"name":"neithos-rustdesk-wss-tests","private":true,"scripts":{"test:integration":"node tests/wss-integration.cjs"},"devDependencies":{"ws":"8.21.3"}}

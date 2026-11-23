@@ -4,3 +4,5 @@ pub mod common;
 mod database;
 mod peer;
 mod version;
+
+mod ws_sessions;

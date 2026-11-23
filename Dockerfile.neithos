@@ -1,0 +1,18 @@
+FROM --platform=$BUILDPLATFORM rust:1.91-bookworm AS build
+ARG TARGETARCH
+RUN apt-get update && apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross cmake clang pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN rustup target add aarch64-unknown-linux-gnu
+WORKDIR /src
+COPY . .
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
+RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/usr/local/cargo/git --mount=type=cache,target=/src/target \
+    case "$TARGETARCH" in arm64) target=aarch64-unknown-linux-gnu ;; amd64) target=x86_64-unknown-linux-gnu ;; *) exit 1 ;; esac && \
+    cargo build --locked --release --target "$target" --bin hbbs --bin hbbr && \
+    mkdir /out && cp target/"$target"/release/hbbs target/"$target"/release/hbbr /out/
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 libgcc-s1 && rm -rf /var/lib/apt/lists/*
+COPY --from=build /out/hbbs /out/hbbr /usr/local/bin/
+WORKDIR /root
+ENV HOME=/root
+EXPOSE 21115/tcp 21116/tcp 21116/udp 21117/tcp 21118/tcp 21119/tcp
+LABEL org.opencontainers.image.title="NeithOS RustDesk OSS WSS" org.opencontainers.image.licenses="AGPL-3.0"

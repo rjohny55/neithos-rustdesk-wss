@@ -1,0 +1,7 @@
+.git
+target
+node_modules
+*.log
+*.json.tmp
+deploy/private
+test.sqlite3

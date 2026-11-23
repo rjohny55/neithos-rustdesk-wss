@@ -1,0 +1,10 @@
+# Package release binaries built with Dockerfile.neithos or the documented cross-build.
+FROM debian:bookworm-slim
+ARG TARGETARCH
+ARG SOURCE_REVISION
+COPY dist/${TARGETARCH}/hbbs dist/${TARGETARCH}/hbbr /usr/local/bin/
+COPY dist/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+WORKDIR /root
+ENV HOME=/root
+LABEL org.opencontainers.image.title="NeithOS RustDesk OSS WSS" org.opencontainers.image.licenses="AGPL-3.0-only" org.opencontainers.image.source="https://github.com/rjohny55/neithos-rustdesk-wss" org.opencontainers.image.revision=$SOURCE_REVISION
+EXPOSE 21115 21116 21116/udp 21117 21118 21119

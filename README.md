@@ -1,3 +1,5 @@
+> **NeithOS OSS + WebSocket fork:** see [README_NEITHOS.md](README_NEITHOS.md) for changes, client setup, build instructions and validation. Original upstream README follows.
+
 # RustDesk Server Program
 
 [![build](https://github.com/rustdesk/rustdesk-server/actions/workflows/build.yaml/badge.svg)](https://github.com/rustdesk/rustdesk-server/actions/workflows/build.yaml)
