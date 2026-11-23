@@ -222,6 +222,8 @@ pub(crate) fn proxy_client_addr(addr: std::net::SocketAddr, headers: &http::Head
     forwarded_addr(addr, headers, &std::env::var("TRUSTED_PROXIES").unwrap_or_default())
 }
 fn forwarded_addr(addr: std::net::SocketAddr, headers: &http::HeaderMap, networks: &str) -> std::net::SocketAddr {
+    // Dual-stack listeners report Docker IPv4 proxies as ::ffff:a.b.c.d.
+    let addr = hbb_common::try_into_v4(addr);
     let trusted = networks.split(',').filter_map(|x| x.trim().parse::<ipnetwork::IpNetwork>().ok()).any(|net| net.contains(addr.ip()));
     if trusted {
         if let Some(ip) = headers.get("X-Real-IP").and_then(|v| v.to_str().ok()).and_then(|v| v.parse().ok()) {
@@ -240,6 +242,8 @@ mod proxy_tests {
         let a = "10.239.80.4:32100".parse().unwrap();
         assert_eq!(forwarded_addr(a, &headers, ""), a);
         assert_eq!(forwarded_addr(a, &headers, "10.239.80.4/32").to_string(), "198.51.100.5:32100");
+        let mapped = "[::ffff:10.239.80.4]:32101".parse().unwrap();
+        assert_eq!(forwarded_addr(mapped, &headers, "10.239.80.4/32").to_string(), "198.51.100.5:32101");
         headers.insert("X-Real-IP", "not-an-ip".parse().unwrap());
         assert_eq!(forwarded_addr(a, &headers, "10.239.80.4/32"), a);
     }
